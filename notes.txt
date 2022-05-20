@@ -1,0 +1,95 @@
+1. Empty base class optimization
+2. Pod type -> trivial_constructible && standard_layout
+3. Default vs value initizliation
+4. Function declaration that looks like this:
+        A foo(); //thinking that we are creating a variable foo of type A
+
+
+
+5. Decorator + Facet + Mixin
+6. Policy == Strategy
+
+7. Type Erasure
+8. Template Function DPattern / CRTP? 
+9. Visitor
+10. std variant
+11. std union
+
+
+12. PIMPL (pointer to implementation) == Strategy? 
+--> separate implementation from interface .. hmm
+- break compilation dependencies
+
+--> internal cpp/hpp library that keeps changinging, does not need client to recompile.
+--> changing the impl class, does not require recompilation of sources that include the main header
+--> about physical design of files
+
+
+13. Bridge Design Pattern // Proxy?
+--support multiple implementations.. hmm? 
+
+Proxy could be used when you want to lazy-instantiate an object, or hide the fact that you're calling a remote service, or control access to the object.
+
+Decorator is also called "Smart Proxy." This is used when you want to add functionality to an object, but not by extending that object's type. This allows you to do so at runtime.
+
+Adapter is used when you have an abstract interface, and you want to map that interface to another object which has similar functional role, but a different interface.
+
+Bridge is very similar to Adapter, but we call it Bridge when you define both the abstract interface and the underlying implementation. I.e. you're not adapting to some legacy or third-party code, you're the designer of all the code but you need to be able to swap out different implementations.
+
+Facade is a higher-level (read: simpler) interface to a subsystem of one or more classes. Suppose you have a complex concept that requires multiple objects to represent. Making changes to that set of objects is confusing, because you don't always know which object has the method you need to call. That's the time to write a Facade that provides high-level methods for all the complex operations you can do to the collection of objects. Example: a Domain Model for a school section, with methods like countStudents(), reportAttendance(), assignSubstituteTeacher(), and so on.
+
+
+
+Memory Model:
+-------------
+enum memory_order{
+  memory_order_relaxed, --> NO SYNC
+  memory_order_consume --> read,
+  memory_order_acquire --> read 
+  memory_order_release --> write,
+  memory_order_acq_rel --> read/modify/write
+  memory_order_seq_cst --> read/modify/writei (sequential consistency)
+}
+
+1. Sequential Consistency
+2. Strong Memory Model 
+3. std::atomic_flag, std::atomic
+4. compare_exchange_weak/compare_exchange_strong
+    bool val.compare_exchange_weak(expected, desired)
+        if( val == expected)
+        {
+            val = desired;
+            return true;
+        }
+        else
+        {
+            expected = val;
+            return false;
+        }
+    while( ! val.compare_exchange_weak(expected, desired)); 
+        --> while ( val == expected ) 
+        once while exits, val = desired 
+
+    Example:
+    template <typename T>
+    T fetch_mult(std::atomic<T>& shared, T mult){
+        T oldValue= shared.load();
+        while (!shared.compare_exchange_strong(oldValue, oldValue * mult));
+        return oldValue;
+    }
+
+    Reason this works is, the first thread that enters will:
+        1. shared.compare_exchange_strong(oldValue, oldValue*mult) --> return true
+        2. shared <-- oldValue*mult 
+
+        3. in the meantime any other thread when doing CAS, will return false beacuse shared <-- oldValue*mult
+            so, expected <- shared, then reloop to check 
+std::shared_ptr<MyData> p;
+std::shared_ptr<MyData> p2= std::atomic_load(&p);
+std::shared_ptr<MyData> p3(new MyData);
+std::atomic_store(&p, p3);
+
+
+### Acquire Release Semantic
+faster than seq_cst 
+`
